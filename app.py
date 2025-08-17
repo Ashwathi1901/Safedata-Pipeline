@@ -9,7 +9,7 @@ from modules import reporting as rep
 from modules import compliance as comp
 
 st.set_page_config(page_title="SafeData Pipeline", layout="wide")
-st.title("🔐 SafeData Pipeline (Demo)")
+st.title("🔐 SafeData Pipeline ")
 
 st.sidebar.header("Pipeline Steps")
 steps = ["Upload", "Risk", "Protect", "Utility", "Compliance", "Report"]
