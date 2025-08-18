@@ -108,10 +108,10 @@ if selected == "Utility":
     else:
         before = st.session_state.df_anon
         after = st.session_state.df_protected
-        st.write("Overall stats BEFORE")
-        st.dataframe(util.basic_stats(before))
-        st.write("Overall stats AFTER")
-        st.dataframe(util.basic_stats(after))
+        st.write("Shape of 'before':", before.shape)
+        st.write("Columns and dtypes:", before.dtypes)
+        st.write("First 5 rows of 'before':")
+        st.dataframe(before.head())
         drift = util.distribution_drift(before, after)
         st.write("Distribution drift")
         st.dataframe(drift)
