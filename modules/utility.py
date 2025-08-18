@@ -11,6 +11,20 @@ def basic_stats(df: pd.DataFrame):
         return pd.DataFrame({"message": ["No data available"]})
 
     try:
+        # Try all columns
+        desc = df.describe(include="all").T
+    except Exception as e:
+        # Fallback: only numeric summary
+        desc = df.describe(include=[np.number]).T
+        desc["note"] = f"Non-numeric columns skipped due to error: {str(e)}"
+
+    # Always add missing counts
+    desc["missing"] = df.isnull().sum()
+
+    return desc
+
+
+    try:
         desc = df.describe(include="all").T
     except Exception:
         # Fallback to numeric-only summary if mixed data causes errors
