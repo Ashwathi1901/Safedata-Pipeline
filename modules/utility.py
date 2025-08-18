@@ -10,30 +10,34 @@ def basic_stats(df: pd.DataFrame):
     if df is None or df.empty:
         return pd.DataFrame({"message": ["No data available"]})
 
-    try:
-        # Try all columns
-        desc = df.describe(include="all").T
-    except Exception as e:
-        # Fallback: only numeric summary
-        desc = df.describe(include=[np.number]).T
-        desc["note"] = f"Non-numeric columns skipped due to error: {str(e)}"
+        summaries = []
 
-    # Always add missing counts
-    desc["missing"] = df.isnull().sum()
+    # Numeric stats
+    if not df.select_dtypes(include=[np.number]).empty:
+        num_desc = df.describe(include=[np.number]).T
+        num_desc["missing"] = df.isnull().sum()
+        num_desc["type"] = "numeric"
+        summaries.append(num_desc)
 
-    return desc
+    # Categorical stats
+    if not df.select_dtypes(include=["object", "category"]).empty:
+        cat_desc = df.describe(include=["object", "category"]).T
+        cat_desc["missing"] = df.isnull().sum()
+        cat_desc["type"] = "categorical"
+        summaries.append(cat_desc)
 
+    # Datetime stats
+    if not df.select_dtypes(include=["datetime"]).empty:
+        dt_desc = df.describe(include=["datetime"]).T
+        dt_desc["missing"] = df.isnull().sum()
+        dt_desc["type"] = "datetime"
+        summaries.append(dt_desc)
 
-    try:
-        desc = df.describe(include="all").T
-    except Exception:
-        # Fallback to numeric-only summary if mixed data causes errors
-        desc = df.describe().T
-
-    # Add missing values (count instead of fraction for clarity)
-    desc["missing"] = df.isnull().sum()
-    return desc
-
+    # Combine all
+    if summaries:
+        return pd.concat(summaries, axis=0)
+    else:
+        return pd.DataFrame({"message": ["No valid columns to summarize"]})
 
 def ks_numeric(a: pd.Series, b: pd.Series):
     a = a.dropna()
