@@ -7,7 +7,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
 
 def basic_stats(df: pd.DataFrame):
-    desc = df.describe(include="all", datetime_is_numeric=True).T
+    desc = df.describe(include="all").T
     desc["missing"] = df.isna().mean()
     return desc
 
