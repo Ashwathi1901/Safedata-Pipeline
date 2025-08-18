@@ -7,9 +7,19 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
 
 def basic_stats(df: pd.DataFrame):
-    desc = df.describe(include="all").T
-    desc["missing"] = df.isna().mean()
+    if df is None or df.empty:
+        return pd.DataFrame({"message": ["No data available"]})
+
+    try:
+        desc = df.describe(include="all").T
+    except Exception:
+        # Fallback to numeric-only summary if mixed data causes errors
+        desc = df.describe().T
+
+    # Add missing values (count instead of fraction for clarity)
+    desc["missing"] = df.isnull().sum()
     return desc
+
 
 def ks_numeric(a: pd.Series, b: pd.Series):
     a = a.dropna()
