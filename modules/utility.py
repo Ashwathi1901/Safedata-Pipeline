@@ -5,39 +5,28 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, f1_score
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
-
 def basic_stats(df: pd.DataFrame):
     if df is None or df.empty:
         return pd.DataFrame({"message": ["No data available"]})
 
+    try:
+        # Try full describe
+        desc = df.describe(include="all").T
+    except Exception as e:
+        # Fallback: describe only numeric + categorical separately
         summaries = []
+        if not df.select_dtypes(include=[np.number]).empty:
+            summaries.append(df.describe(include=[np.number]).T)
+        if not df.select_dtypes(include=["object", "category"]).empty:
+            summaries.append(df.describe(include=["object", "category"]).T)
+        if summaries:
+            desc = pd.concat(summaries, axis=0)
+        else:
+            return pd.DataFrame({"message": [f"Describe failed: {e}"]})
 
-    # Numeric stats
-    if not df.select_dtypes(include=[np.number]).empty:
-        num_desc = df.describe(include=[np.number]).T
-        num_desc["missing"] = df.isnull().sum()
-        num_desc["type"] = "numeric"
-        summaries.append(num_desc)
-
-    # Categorical stats
-    if not df.select_dtypes(include=["object", "category"]).empty:
-        cat_desc = df.describe(include=["object", "category"]).T
-        cat_desc["missing"] = df.isnull().sum()
-        cat_desc["type"] = "categorical"
-        summaries.append(cat_desc)
-
-    # Datetime stats
-    if not df.select_dtypes(include=["datetime"]).empty:
-        dt_desc = df.describe(include=["datetime"]).T
-        dt_desc["missing"] = df.isnull().sum()
-        dt_desc["type"] = "datetime"
-        summaries.append(dt_desc)
-
-    # Combine all
-    if summaries:
-        return pd.concat(summaries, axis=0)
-    else:
-        return pd.DataFrame({"message": ["No valid columns to summarize"]})
+    # Add missing values
+    desc["missing"] = df.isna().mean()
+    return desc
 
 def ks_numeric(a: pd.Series, b: pd.Series):
     a = a.dropna()
