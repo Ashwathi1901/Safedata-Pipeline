@@ -84,7 +84,8 @@ if selected == "Protect":
         method = st.selectbox("Or choose Synthetic Data generation", ["None", "Lightweight sampler"])
         df_prot = df.copy()
         df = st.session_state.df_anon
-        df_prot['income_binned'] = pd.cut(df['income'], bins=10).astype(str)
+        bins = 5
+        df_prot['income_binned'] = pd.cut(df_prot['income'], bins=bins)
         df_prot['income_numeric'] = df_prot['income']
         dp_cols = [c for c in dp_cols if pd.api.types.is_numeric_dtype(df[c])]
         df_prot = priv.add_dp_noise(df, dp_cols, epsilon=epsilon, sensitivity=1.0)
@@ -107,10 +108,10 @@ if selected == "Utility":
     else:
         before = st.session_state.df_anon
         after = st.session_state.df_protected
-        st.write("Shape of 'before':", before.shape)
-        st.write("Columns and dtypes:", before.dtypes)
-        st.write("First 5 rows of 'before':")
-        st.dataframe(before.head())
+        st.write("Overall stats BEFORE")
+        st.dataframe(util.basic_stats(before))
+        st.write("Overall stats AFTER")
+        st.dataframe(util.basic_stats(after))
         drift = util.distribution_drift(before, after)
         st.write("Distribution drift")
         st.dataframe(drift)
