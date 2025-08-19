@@ -84,8 +84,7 @@ if selected == "Protect":
         method = st.selectbox("Or choose Synthetic Data generation", ["None", "Lightweight sampler"])
         df_prot = df.copy()
         df = st.session_state.df_anon
-        bins = 5
-        df_prot['income_binned'] = pd.cut(df_prot['income'], bins=bins)
+        df_prot['income_binned'] = pd.cut(df['income'], bins=10).astype(str)
         df_prot['income_numeric'] = df_prot['income']
         dp_cols = [c for c in dp_cols if pd.api.types.is_numeric_dtype(df[c])]
         df_prot = priv.add_dp_noise(df, dp_cols, epsilon=epsilon, sensitivity=1.0)
