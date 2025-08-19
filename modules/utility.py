@@ -7,17 +7,16 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
 
 def basic_stats(df):
-    try:
-        desc_num = df.describe(include=[np.number]).T
-    except Exception:
-        desc_num = pd.DataFrame()
+    # Describe numeric columns
+    num_desc = df.describe(include=[np.number]).T
 
-    try:
-        desc_obj = df.describe(include=[object]).T
-    except Exception:
-        desc_obj = pd.DataFrame()
+    # Describe object (string/categorical) columns
+    obj_desc = df.describe(include=['object', 'category']).T
 
-    return pd.concat([desc_num, desc_obj], axis=0)
+    # Combine safely
+    desc = pd.concat([num_desc, obj_desc], axis=0)
+    return desc
+
 
 def ks_numeric(a: pd.Series, b: pd.Series):
     a = a.dropna()
