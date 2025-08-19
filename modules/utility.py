@@ -5,28 +5,19 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, f1_score
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
-def basic_stats(df: pd.DataFrame):
-    if df is None or df.empty:
-        return pd.DataFrame({"message": ["No data available"]})
+
+def basic_stats(df):
+    try:
+        desc_num = df.describe(include=[np.number]).T
+    except Exception:
+        desc_num = pd.DataFrame()
 
     try:
-        # Try full describe
-        desc = df.describe(include="all").T
-    except Exception as e:
-        # Fallback: describe only numeric + categorical separately
-        summaries = []
-        if not df.select_dtypes(include=[np.number]).empty:
-            summaries.append(df.describe(include=[np.number]).T)
-        if not df.select_dtypes(include=["object", "category"]).empty:
-            summaries.append(df.describe(include=["object", "category"]).T)
-        if summaries:
-            desc = pd.concat(summaries, axis=0)
-        else:
-            return pd.DataFrame({"message": [f"Describe failed: {e}"]})
+        desc_obj = df.describe(include=[object]).T
+    except Exception:
+        desc_obj = pd.DataFrame()
 
-    # Add missing values
-    desc["missing"] = df.isna().mean()
-    return desc
+    return pd.concat([desc_num, desc_obj], axis=0)
 
 def ks_numeric(a: pd.Series, b: pd.Series):
     a = a.dropna()
