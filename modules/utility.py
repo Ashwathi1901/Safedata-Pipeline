@@ -20,26 +20,28 @@ def basic_stats(df: pd.DataFrame):
         num_desc["missing"] = num_cols.isnull().sum()
         results.append(num_desc)
 
-    # Object stats (gender, name, etc.)
+    # Object / string stats
     obj_cols = df.select_dtypes(include=["object"])
     if not obj_cols.empty:
         obj_desc = obj_cols.describe().T
         obj_desc["missing"] = obj_cols.isnull().sum()
         results.append(obj_desc)
 
-    # Category stats (like pd.cut intervals)
+    # Category / interval-like stats
     cat_cols = df.select_dtypes(include=["category"])
     if not cat_cols.empty:
-        # 🔑 Convert categories (including pd.cut intervals) to string
+        # Convert to string first to avoid TypeError
         cat_as_str = cat_cols.astype(str)
         cat_desc = cat_as_str.describe().T
-        cat_desc["missing"] = cat_as_str.isnull().sum()
+        cat_desc["missing"] = cat_cols.isnull().sum()
         results.append(cat_desc)
 
-    if results:
-        return pd.concat(results, axis=0)
-    else:
+    # Fallback: nothing to describe
+    if not results:
         return pd.DataFrame({"message": ["No valid columns to summarize"]})
+
+    return pd.concat(results, axis=0)
+
 
 
 
