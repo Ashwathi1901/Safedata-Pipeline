@@ -6,6 +6,12 @@ from sklearn.metrics import accuracy_score, f1_score
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
 
+before = before.apply(lambda col: col.astype(str) if str(col.dtype) == "category" else col)
+after = after.apply(lambda col: col.astype(str) if str(col.dtype) == "category" else col)
+
+st.dataframe(util.basic_stats(before))
+st.dataframe(util.basic_stats(after))
+
 def basic_stats(df: pd.DataFrame):
     if df is None or df.empty:
         return pd.DataFrame({"message": ["No data available"]})
@@ -29,8 +35,10 @@ def basic_stats(df: pd.DataFrame):
     # Category stats (like pd.cut intervals)
     cat_cols = df.select_dtypes(include=["category"])
     if not cat_cols.empty:
-        cat_desc = cat_cols.astype(str).describe().T   # 🔑 convert categories to string
-        cat_desc["missing"] = cat_cols.isnull().sum()
+        # 🔑 Convert categories (including pd.cut intervals) to string
+        cat_as_str = cat_cols.astype(str)
+        cat_desc = cat_as_str.describe().T
+        cat_desc["missing"] = cat_as_str.isnull().sum()
         results.append(cat_desc)
 
     if results:
