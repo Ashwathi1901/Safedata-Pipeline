@@ -97,8 +97,8 @@ st.markdown(
 # ─────────────────────────────────────────────
 # APP TITLE
 # ─────────────────────────────────────────────
-#st.title("🔐 SafeData Pipeline")
-st.title("🚀 Safedata Pipeline - Updated Test")
+st.title("🔐 SafeData Pipeline")
+
 # Sidebar pipeline steps
 st.sidebar.header("📌 Pipeline Steps")
 steps = ["Upload", "Risk", "Protect", "Utility", "Compliance", "Report"]
