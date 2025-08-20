@@ -7,40 +7,84 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
 
 
-def basic_stats(df: pd.DataFrame):
-    if df is None or df.empty:
-        return pd.DataFrame({"message": ["No data available"]})
+# put this in modules/utility.py (replace old basic_stats)
+import numpy as np
+import pandas as pd
+from pandas.api.types import is_numeric_dtype, is_datetime64_any_dtype
+from scipy import stats
+# other imports (keep your ks/chi2/model functions unchanged)
 
-    results = []
+def basic_stats(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Robust column-by-column stats safe for Streamlit display.
+    Converts non-numeric/interval/categorical values to strings for label summaries.
+    """
+    if df is None:
+        return pd.DataFrame([{"column": "(no data)"}])
+    if df.empty:
+        return pd.DataFrame([{"column": "(empty dataframe)"}])
 
-    # Numeric stats
-    num_cols = df.select_dtypes(include=[np.number])
-    if not num_cols.empty:
-        num_desc = num_cols.describe().T
-        num_desc["missing"] = num_cols.isnull().sum()
-        results.append(num_desc)
+    rows = []
+    for col in df.columns:
+        s = df[col]
+        n = len(s)
+        miss = int(s.isna().sum())
+        miss_pct = round(miss / n * 100.0, 2) if n else np.nan
+        nunique = int(s.nunique(dropna=True))
 
-    # Object / string stats
-    obj_cols = df.select_dtypes(include=["object"])
-    if not obj_cols.empty:
-        obj_desc = obj_cols.describe().T
-        obj_desc["missing"] = obj_cols.isnull().sum()
-        results.append(obj_desc)
+        row = {
+            "column": col,
+            "dtype": str(s.dtype),
+            "count": int(n),
+            "missing": miss,
+            "missing_%": miss_pct,
+            "nunique": nunique,
+        }
 
-    # Category / interval-like stats
-    cat_cols = df.select_dtypes(include=["category"])
-    if not cat_cols.empty:
-        # Convert to string first to avoid TypeError
-        cat_as_str = cat_cols.astype(str)
-        cat_desc = cat_as_str.describe().T
-        cat_desc["missing"] = cat_cols.isnull().sum()
-        results.append(cat_desc)
+        # numeric columns
+        if is_numeric_dtype(s):
+            s_num = pd.to_numeric(s, errors="coerce").dropna()
+            row.update({
+                "mean": float(s_num.mean()) if not s_num.empty else np.nan,
+                "std": float(s_num.std()) if not s_num.empty else np.nan,
+                "min": float(s_num.min()) if not s_num.empty else np.nan,
+                "p25": float(s_num.quantile(0.25)) if not s_num.empty else np.nan,
+                "median": float(s_num.median()) if not s_num.empty else np.nan,
+                "p75": float(s_num.quantile(0.75)) if not s_num.empty else np.nan,
+                "max": float(s_num.max()) if not s_num.empty else np.nan,
+            })
+        # datetime columns
+        elif is_datetime64_any_dtype(s):
+            s_dt = pd.to_datetime(s, errors="coerce")
+            try:
+                row.update({
+                    "min": str(s_dt.min()),
+                    "max": str(s_dt.max()),
+                })
+            except Exception:
+                row.update({"min": None, "max": None})
+        # everything else: safe label summary
+        else:
+            s_safe = s.astype(str)  # safe conversion for intervals/categories/etc.
+            try:
+                top_val = s_safe.mode(dropna=True).iloc[0]
+                top_freq = int(s_safe.value_counts(dropna=True).iloc[0])
+            except Exception:
+                top_val, top_freq = None, np.nan
+            row.update({
+                "top": None if top_val is None else str(top_val),
+                "freq": top_freq
+            })
 
-    # Fallback: nothing to describe
-    if not results:
-        return pd.DataFrame({"message": ["No valid columns to summarize"]})
+        rows.append(row)
 
-    return pd.concat(results, axis=0)
+    # build DataFrame and keep consistent column order
+    order = ["column","dtype","count","missing","missing_%","nunique",
+             "mean","std","min","p25","median","p75","max","top","freq"]
+    out = pd.DataFrame(rows)
+    out = out[[c for c in order if c in out.columns]]
+    return out
+
 
 
 
