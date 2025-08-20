@@ -15,7 +15,7 @@ st.set_page_config(
     page_title="SafeData Pipeline",
     page_icon="🔐",
     layout="wide"
-    st.title("🚀 Safedata Pipeline - Updated Test")
+   
 
 )
 
@@ -97,8 +97,8 @@ st.markdown(
 # ─────────────────────────────────────────────
 # APP TITLE
 # ─────────────────────────────────────────────
-st.title("🔐 SafeData Pipeline")
-
+#st.title("🔐 SafeData Pipeline")
+st.title("🚀 Safedata Pipeline - Updated Test")
 # Sidebar pipeline steps
 st.sidebar.header("📌 Pipeline Steps")
 steps = ["Upload", "Risk", "Protect", "Utility", "Compliance", "Report"]
