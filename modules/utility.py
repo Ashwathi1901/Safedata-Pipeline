@@ -6,11 +6,6 @@ from sklearn.metrics import accuracy_score, f1_score
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
 
-before = before.apply(lambda col: col.astype(str) if str(col.dtype) == "category" else col)
-after = after.apply(lambda col: col.astype(str) if str(col.dtype) == "category" else col)
-
-st.dataframe(util.basic_stats(before))
-st.dataframe(util.basic_stats(after))
 
 def basic_stats(df: pd.DataFrame):
     if df is None or df.empty:
