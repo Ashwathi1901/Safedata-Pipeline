@@ -15,6 +15,8 @@ st.set_page_config(
     page_title="SafeData Pipeline",
     page_icon="🔐",
     layout="wide"
+    st.title("🚀 Safedata Pipeline - Updated Test")
+
 )
 
 # ─────────────────────────────────────────────
