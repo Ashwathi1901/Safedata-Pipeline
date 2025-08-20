@@ -6,16 +6,38 @@ from sklearn.metrics import accuracy_score, f1_score
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
 
-def basic_stats(df):
-    # Describe numeric columns
-    num_desc = df.describe(include=[np.number]).T
+def basic_stats(df: pd.DataFrame):
+    if df is None or df.empty:
+        return pd.DataFrame({"message": ["No data available"]})
 
-    # Describe object (string/categorical) columns
-    obj_desc = df.describe(include=['object', 'category']).T
+    results = []
 
-    # Combine safely
-    desc = pd.concat([num_desc, obj_desc], axis=0)
-    return desc
+    # Numeric stats
+    num_cols = df.select_dtypes(include=[np.number])
+    if not num_cols.empty:
+        num_desc = num_cols.describe().T
+        num_desc["missing"] = num_cols.isnull().sum()
+        results.append(num_desc)
+
+    # Object stats (gender, name, etc.)
+    obj_cols = df.select_dtypes(include=["object"])
+    if not obj_cols.empty:
+        obj_desc = obj_cols.describe().T
+        obj_desc["missing"] = obj_cols.isnull().sum()
+        results.append(obj_desc)
+
+    # Category stats (like pd.cut intervals)
+    cat_cols = df.select_dtypes(include=["category"])
+    if not cat_cols.empty:
+        cat_desc = cat_cols.astype(str).describe().T   # 🔑 convert categories to string
+        cat_desc["missing"] = cat_cols.isnull().sum()
+        results.append(cat_desc)
+
+    if results:
+        return pd.concat(results, axis=0)
+    else:
+        return pd.DataFrame({"message": ["No valid columns to summarize"]})
+
 
 
 def ks_numeric(a: pd.Series, b: pd.Series):
