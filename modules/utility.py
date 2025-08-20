@@ -7,69 +7,39 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
 
 
-def basic_stats(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Robust summary that never calls pandas.describe() (avoids CategoricalDtype / Interval issues).
-    Returns only simple Python/NumPy scalars/strings that Streamlit can render safely.
-    """
+def basic_stats(df: pd.DataFrame):
     if df is None or df.empty:
-        return pd.DataFrame([{"column": "(no data)"}])
+        return pd.DataFrame({"message": ["No data available"]})
 
-    rows = []
-    for col in df.columns:
-        s = df[col]
-        n = len(s)
-        miss = int(s.isna().sum())
-        miss_pct = (miss / n * 100.0) if n else np.nan
-        nunique = int(s.nunique(dropna=True))
+    results = []
 
-        row = {
-            "column": col,
-            "dtype": str(s.dtype),
-            "count": n,
-            "missing": miss,
-            "missing_%": round(miss_pct, 2) if n else np.nan,
-            "nunique": nunique,
-        }
+    # Numeric stats
+    num_cols = df.select_dtypes(include=[np.number])
+    if not num_cols.empty:
+        num_desc = num_cols.describe().T
+        num_desc["missing"] = num_cols.isnull().sum()
+        results.append(num_desc)
 
-        if is_numeric_dtype(s):
-            s_num = pd.to_numeric(s, errors="coerce")
-            row.update({
-                "mean": float(s_num.mean()) if n else np.nan,
-                "std": float(s_num.std()) if n else np.nan,
-                "min": float(s_num.min()) if n else np.nan,
-                "p25": float(s_num.quantile(0.25)) if n else np.nan,
-                "median": float(s_num.median()) if n else np.nan,
-                "p75": float(s_num.quantile(0.75)) if n else np.nan,
-                "max": float(s_num.max()) if n else np.nan,
-            })
-        elif is_datetime64_any_dtype(s):
-            # Show range for datetimes
-            row.update({
-                "min": str(pd.to_datetime(s, errors="coerce").min()),
-                "max": str(pd.to_datetime(s, errors="coerce").max()),
-            })
-        else:
-            # Objects / categories / intervals / bools → treat as labels
-            vc = s.astype("string")  # string dtype is display-safe
-            try:
-                top_val = vc.mode(dropna=True).iloc[0]
-                top_freq = vc.value_counts(dropna=True).iloc[0]
-            except Exception:
-                top_val, top_freq = pd.NA, pd.NA
-            row.update({
-                "top": None if pd.isna(top_val) else str(top_val),
-                "freq": int(top_freq) if pd.notna(top_freq) else np.nan,
-            })
+    # Object stats (gender, name, etc.)
+    obj_cols = df.select_dtypes(include=["object"])
+    if not obj_cols.empty:
+        obj_desc = obj_cols.describe().T
+        obj_desc["missing"] = obj_cols.isnull().sum()
+        results.append(obj_desc)
 
-        rows.append(row)
+    # Category stats (like pd.cut intervals)
+    cat_cols = df.select_dtypes(include=["category"])
+    if not cat_cols.empty:
+        # 🔑 Convert categories (including pd.cut intervals) to string
+        cat_as_str = cat_cols.astype(str)
+        cat_desc = cat_as_str.describe().T
+        cat_desc["missing"] = cat_as_str.isnull().sum()
+        results.append(cat_desc)
 
-    order = ["column","dtype","count","missing","missing_%","nunique",
-             "mean","std","min","p25","median","p75","max","top","freq"]
-    out = pd.DataFrame(rows)
-    # Keep only columns that exist in this run
-    out = out[[c for c in order if c in out.columns]]
-    return out
+    if results:
+        return pd.concat(results, axis=0)
+    else:
+        return pd.DataFrame({"message": ["No valid columns to summarize"]})
 
 
 
