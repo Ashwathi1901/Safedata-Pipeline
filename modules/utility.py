@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from pandas.api.types import is_numeric_dtype, is_datetime64_any_dtype, is_categorical_dtype
+from pandas.api.types import is_numeric_dtype, is_datetime64_any_dtype
 from scipy import stats
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, f1_score
@@ -8,13 +8,13 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
 
 
-# -----------------------
-# Robust Basic Statistics
-# -----------------------
+# ─────────────────────────────────────────────
+# BASIC STATS
+# ─────────────────────────────────────────────
 def basic_stats(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Robust column-by-column stats safe for Streamlit display.
-    Handles numeric, categorical, and datetime safely.
+    Compute robust column-wise summary statistics.
+    Safe for Streamlit display (handles empty / mixed dtypes).
     """
     if df is None or df.empty:
         return pd.DataFrame([{"column": "(no data)"}])
@@ -30,13 +30,12 @@ def basic_stats(df: pd.DataFrame) -> pd.DataFrame:
         row = {
             "column": col,
             "dtype": str(s.dtype),
-            "count": int(n),
+            "count": n,
             "missing": miss,
             "missing_%": miss_pct,
             "nunique": nunique,
         }
 
-        # numeric
         if is_numeric_dtype(s):
             s_num = pd.to_numeric(s, errors="coerce").dropna()
             if not s_num.empty:
@@ -49,24 +48,19 @@ def basic_stats(df: pd.DataFrame) -> pd.DataFrame:
                     "p75": float(s_num.quantile(0.75)),
                     "max": float(s_num.max()),
                 })
-        # datetime
         elif is_datetime64_any_dtype(s):
-            s_dt = pd.to_datetime(s, errors="coerce")
-            if not s_dt.dropna().empty:
+            s_dt = pd.to_datetime(s, errors="coerce").dropna()
+            if not s_dt.empty:
                 row.update({
                     "min": str(s_dt.min()),
                     "max": str(s_dt.max()),
                 })
-        # categorical / object
         else:
             s_safe = s.astype(str).fillna("NA")
             if not s_safe.empty:
                 top_val = s_safe.mode().iloc[0] if not s_safe.mode().empty else None
                 top_freq = int(s_safe.value_counts().iloc[0]) if not s_safe.value_counts().empty else 0
-                row.update({
-                    "top": top_val,
-                    "freq": top_freq
-                })
+                row.update({"top": top_val, "freq": top_freq})
 
         rows.append(row)
 
@@ -76,9 +70,9 @@ def basic_stats(df: pd.DataFrame) -> pd.DataFrame:
     return out[[c for c in order if c in out.columns]]
 
 
-# -----------------------
-# Drift Tests
-# -----------------------
+# ─────────────────────────────────────────────
+# DISTRIBUTION DRIFT
+# ─────────────────────────────────────────────
 def ks_numeric(a: pd.Series, b: pd.Series):
     a, b = a.dropna(), b.dropna()
     if len(a) < 5 or len(b) < 5:
@@ -89,14 +83,15 @@ def chi2_categorical(a: pd.Series, b: pd.Series):
     a = a.fillna("NA").astype(str)
     b = b.fillna("NA").astype(str)
     cats = sorted(set(a.unique()).union(set(b.unique())))
-    oa = np.array([ (a == c).sum() for c in cats ])
-    ob = np.array([ (b == c).sum() for c in cats ])
+    oa = np.array([(a == c).sum() for c in cats])
+    ob = np.array([(b == c).sum() for c in cats])
     if oa.sum()==0 or ob.sum()==0:
         return np.nan
-    chi2, _ = stats.chisquare(f_obs=oa, f_exp=(ob+1e-9))
+    # add 1e-9 to avoid zero-division
+    chi2, _ = stats.chisquare(f_obs=oa + 1e-9, f_exp=ob + 1e-9)
     return chi2
 
-def distribution_drift(df_before: pd.DataFrame, df_after: pd.DataFrame):
+def distribution_drift(df_before: pd.DataFrame, df_after: pd.DataFrame) -> pd.DataFrame:
     metrics = []
     for col in df_before.columns:
         if col not in df_after.columns:
@@ -111,10 +106,14 @@ def distribution_drift(df_before: pd.DataFrame, df_after: pd.DataFrame):
     return pd.DataFrame(metrics)
 
 
-# -----------------------
-# Utility Check via Models
-# -----------------------
-def model_utility_check(df_before: pd.DataFrame, df_after: pd.DataFrame, target: str):
+# ─────────────────────────────────────────────
+# MODEL UTILITY CHECK
+# ─────────────────────────────────────────────
+def model_utility_check(df_before: pd.DataFrame, df_after: pd.DataFrame, target: str) -> pd.DataFrame:
+    """
+    Train/test simple ML models on before vs after datasets
+    to check predictive utility retention.
+    """
     results = []
 
     for name, d in [("original", df_before), ("protected", df_after)]:
@@ -132,7 +131,8 @@ def model_utility_check(df_before: pd.DataFrame, df_after: pd.DataFrame, target:
         X = X.fillna(X.mean(numeric_only=True))
         try:
             X_train, X_test, y_train, y_test = train_test_split(
-                X, y, test_size=0.3, random_state=42, stratify=y if y.nunique()<20 else None
+                X, y, test_size=0.3, random_state=42,
+                stratify=y if y.nunique() < 20 else None
             )
         except Exception:
             results.append({"dataset": name, "acc": np.nan, "f1": np.nan})
